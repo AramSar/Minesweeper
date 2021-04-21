@@ -6,6 +6,7 @@ const express = require('express');
 const app = express();
 const users = require('./users/users.controller');
 const auth = require('./auth/auth.controller');
+const games = require('./games/games.controller');
 const { handleError } = require('./commons/middlewares/error-handler.middleware');
 const { jwtMiddleware } = require('./commons/middlewares/auth.middleware');
 const cors = require('cors');
@@ -23,6 +24,7 @@ app.use(jwtMiddleware.unless({
 
 app.use('/users', users);
 app.use('/auth', auth);
+app.use('/games', games)
 
 app.use(handleError);
 
