@@ -1,23 +1,25 @@
-const { NotFound } = require('http-errors');
+const { BadRequest, Forbidden } = require('http-errors');
 const Game = require('./game.entity');
 const mongoose = require('mongoose');
+const { GameStatus, Difficulty } = require("../commons/utilities/constants");
+const UserService = requre("../users/users.service");
 
 class GameService {
     async create(userId, difficulty) {
 
         const dimentions = getDimentions(difficulty);
 
-        const mineCount = difficulty == 1 ?  10: 
-                          difficulty == 2 ? 40 :
-                          difficulty == 3 ? 99 : 0;
+        const mineCount = difficulty == Difficulty.Easy ?  10: 
+                          difficulty == Difficulty.Medium ? 40 :
+                          difficulty == Difficulty.Hard ? 99 : 0;
         
         if(!mineCount || !dimentions)
         {
-            //TODO throw
+            throw new BadRequest();
         }
 
         const mineSet = new Set();
-        const opened = [];
+
         while(mineSet.length < mineCount)
         {
             mineSet.push(Math.floor(Math.random()*siz[0]*dimentions[1]))
@@ -28,24 +30,24 @@ class GameService {
             user : userId,
             opened : [],
             mines : mineSet,
-            status : 0, // TODO Enum
-            startDate : new Date(), // TODO utc
+            status : GameStatus.InProgress,
+            startTimeStamp : Date.now().getTime(),
         }
 
-        const user = new Game(payload);
-        const { _id }  = await user.save();
+        const game = new Game(payload);
+        const { _id }  = await game.save();
         return { id: _id, dimentions };
     }
 
     async openCell(gameId, userId, cell){
-        const game = await Game.findById(id).exec();
+        const game = await Game.findById(gameId).exec();
         if(game?.userId !== userId){
-            // TODO throw
+            throw new Forbidden()
         }
         const cellNumber = toCellNumber(cell);
         
         if(game.opened.includes(cellNumber)){
-            // TODO throw
+            throw new BadRequest();
         }
         
         game.opened.push(cellNumber);
@@ -55,36 +57,42 @@ class GameService {
         
         const result = {
             Cells : [{Cell : cell, Value : value}],
-            Status : "InProgress", // TODO enum
+            Status : GameStatus.InProgress,
         }
 
         if(value == 0){
             openZeros(board, game.opened, cell);
         }
         else if(value == -1) {
-            result.Status = "Lose"; // TODO enum
+            result.Status = GameStatus.Lose;
             game.status = 2;
         }
         
-        if(result.Status == "InProgress" && game.opened.length + game.mines.length == game.dimentions[0] * game.dimentions[1]){
-            result.Status = "Win"; // TODO enum
-            game.status = 1; // TODO enum
+        if(result.Status == GameStatus.InProgress && game.opened.length + game.mines.length == game.dimentions[0] * game.dimentions[1]){
+            result.Status = GameStatus.Win;
+            game.status = GameStatus.Win;
+        }
+
+        if(result.Status != GameStatus.InProgress){
+            game.endTimeStamp = Date.now().getTime();
+            await UserService.informGameResult(game);
         }
               
         await game.save();
 
         for(;len<game.opened.length;len++){
             const cell = toCell(game.opened[len]);
-            result.Cells.push( { Cell : cell, Value : getCellValue(board, cell) } )
+            result.Cells.push( { Cell : cell, Value : getCellValue(board, cell) } );
         }
 
         return result;
     }
 
-    async getFullBoard(gameId){
-        const game = await Game.findById(id).exec();
+    async getFullBoard(gameId, userId){
+        const game = await Game.findById(gameId).exec();
+
         if(game?.userId !== userId){
-            //TODO throw
+            throw new Forbidden();
         }
 
         const board = generateCompleteBoard(game.dimentions, game.mines);

@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 
 const schema = new Schema({
     difficulty: {
-        type: Number,
+        type: String,
         required: true,
     },
 
@@ -26,9 +26,19 @@ const schema = new Schema({
     },
 
     status:{
+        type : String,
+        required: true
+    },
+
+    startTimeStamp :{
         type : Number,
         required: true
-    }
+    },
+    
+    endTimeStamp :{
+        type : Number,
+        required: false
+    },
 
 }, { collection: 'games' });
 

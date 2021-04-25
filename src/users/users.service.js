@@ -1,6 +1,7 @@
 const { NotFound } = require('http-errors');
 const User = require('./user.entity');
 const mongoose = require('mongoose');
+const { GameStatus } = require('../commons/utilities/constants');
 
 class UserService {
     async create(payload) {
@@ -32,6 +33,23 @@ class UserService {
     async delete(id) {
         const user = await this.findOne(id);
         return await user.remove();
+    }
+
+    async informGameResult(game){
+        const user = await findOne(game.userId);
+        const isWin = game.status == GameStatus.Win;
+        if(isWin){
+            user.wonGames++;           
+        }
+        user.totalGames++;
+        let currentBest = user.bestTimes[game.difficulty];
+
+        if(!currentBest){
+            currentBest = Number.MAX_SAFE_INTEGER;
+        }
+        
+        user.bestTimes[game.difficulty] = Math.min(currentBest, (game.endTimeStamp - game.startTimeStamp)/1000);
+        await user.save();
     }
 }
 
