@@ -4,7 +4,7 @@ const games = require('./games.service');
 const asyncHandler = require('express-async-handler');
 
 router.post('/', asyncHandler(async (req, res) => {
-    const result = await games.create(req.user.id, req.body.difficulty);
+    const result = await games.create(req.user.userId, req.body.difficulty);
 
     res.json(result);
 }));
@@ -12,7 +12,7 @@ router.post('/', asyncHandler(async (req, res) => {
 router.patch('/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const result = await games.openCell(id, req.user.id, req.body);
+    const result = await games.openCell(id, req.user.userId, req.body);
 
     res.json(result);
 }));

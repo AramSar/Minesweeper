@@ -3,16 +3,15 @@ const router = express.Router();
 const users = require('./users.service');
 const asyncHandler = require('express-async-handler');
 
-
-router.get('/leaderbord/:mode', asyncHandler(async (req, res) => {
+router.get('/leaderboard/:mode', asyncHandler(async (req, res) => {
     const { mode } = req.params;
     const result = await users.findAll(mode);
     res.json(result);
 }));
 
-router.get('/:id', asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const result = await users.findOne(id);
+router.get('/', asyncHandler(async (req, res) => {
+    const { userId } = req.user;
+    const result = await users.findOne(userId);
     res.json(result);
 }));
 
