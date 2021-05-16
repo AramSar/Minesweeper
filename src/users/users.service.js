@@ -1,6 +1,5 @@
 const { NotFound } = require('http-errors');
 const User = require('./user.entity');
-const mongoose = require('mongoose');
 const { GameStatus } = require('../commons/utilities/constants');
 
 class UserService {
@@ -16,14 +15,24 @@ class UserService {
         const sortObj = {};
         sortObj[`bestTimes.${mode}`] = 'asc'
 
-        return User.find({}, { password: false })
+        return User.find({}, { password: false,  __v : false})
             .limit(limit)
             .sort(sortObj)
             .exec();
     }
 
-    async findOne(id) {
-        const user = await User.findById(id).exec();
+    async findOne(id, hidePassword) {
+        const parameters = {
+            __v : false
+        };
+
+        if(hidePassword){
+            parameters.password = false;
+        }
+
+        const user = await User
+        .findById(id, parameters)
+        .exec();
         if (!user) {
             throw new NotFound(`User with id ${id} not found.`);
         }
@@ -36,12 +45,13 @@ class UserService {
     }
 
     async informGameResult(game){
-        const user = await findOne(game.userId);
+        const user = await this.findOne(game.user);
+
         const isWin = game.status == GameStatus.Win;
         if(isWin){
             user.wonGames++;           
         }
-        user.totalGames++;
+        
         let currentBest = user.bestTimes[game.difficulty];
 
         if(!currentBest){
@@ -51,6 +61,13 @@ class UserService {
         user.bestTimes[game.difficulty] = Math.min(currentBest, (game.endTimeStamp - game.startTimeStamp)/1000);
         await user.save();
     }
+
+    async informGameCreated(userId){
+        const user = await this.findOne(userId);
+        user.totalGames++;
+        await user.save();
+    }
+
 }
 
 module.exports = new UserService();

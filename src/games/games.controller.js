@@ -11,7 +11,7 @@ router.post('/', asyncHandler(async (req, res) => {
 
 router.patch('/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
-
+    console.log("Patched");
     const result = await games.openCell(id, req.user.userId, req.body);
 
     res.json(result);

@@ -1,6 +1,5 @@
-const { BadRequest, Forbidden } = require('http-errors');
+const { BadRequest, Forbidden, NotFound } = require('http-errors');
 const Game = require('./game.entity');
-const mongoose = require('mongoose');
 const { GameStatus, Difficulty } = require("../commons/utilities/constants");
 const UserService = require("../users/users.service");
 
@@ -19,38 +18,59 @@ class GameService {
 
         const mineSet = new Set();
 
-        while (mineSet.length < mineCount) {
-            mineSet.push(Math.floor(Math.random() * siz[0] * dimentions[1]))
+        while (mineSet.size < mineCount) {
+            mineSet.add(Math.floor(Math.random() * dimentions[0] * dimentions[1]))
         }
+
+        console.log(mineSet);
 
         const payload = {
             difficulty: difficulty,
             user: userId,
             opened: [],
-            mines: mineSet,
+            mines: Array(...mineSet),
             status: GameStatus.InProgress,
             startTimeStamp: Date.now(),
         }
 
         const game = new Game(payload);
         const { _id } = await game.save();
+
+        console.log("FINAL GAME", payload);
+        await UserService.informGameCreated(userId);
         return { id: _id, dimentions };
     }
 
     async openCell(gameId, userId, cell) {
         const game = await Game.findById(gameId).exec();
-        if (game?.userId !== userId) {
+        console.log(game);
+
+        if(!game){
+            throw new NotFound("Game not found");
+        }
+
+        if (game.user != userId) {
             throw new Forbidden()
         }
-        const cellNumber = toCellNumber(cell);
 
+        if(game.status != GameStatus.InProgress){
+            throw new BadRequest("Game already ended");
+        }
+
+        const dim = getDimentions(game.difficulty);   
+        
+        if(cell[0] < 0 || cell[1] < 0 || cell[0] >= dim[0] || cell[1] >= dim[1]){
+            throw new BadRequest("Invalid argument provided");
+        }
+        
+        const cellNumber = toCellNumber(dim, cell);
         if (game.opened.includes(cellNumber)) {
-            throw new BadRequest();
+            throw new BadRequest("Cell is already opened");
         }
 
         game.opened.push(cellNumber);
-        const board = generateCompleteBoard(game.dimentions, game.mines);
-        const value = getCellValue(game.dimentions, game.mines, cell);
+        const board = generateCompleteBoard(dim, game.mines);
+        const value = getCellValue(board, cell);
         let len = game.opened.length;
 
         const result = {
@@ -66,20 +86,20 @@ class GameService {
             game.status = 2;
         }
 
-        if (result.Status == GameStatus.InProgress && game.opened.length + game.mines.length == game.dimentions[0] * game.dimentions[1]) {
+        if (result.Status == GameStatus.InProgress && game.opened.length + game.mines.length == dim[0] * dim[1]) {
             result.Status = GameStatus.Win;
             game.status = GameStatus.Win;
         }
 
         if (result.Status != GameStatus.InProgress) {
-            game.endTimeStamp = Date.now().getTime();
+            game.endTimeStamp = Date.now();
             await UserService.informGameResult(game);
         }
 
         await game.save();
 
         for (; len < game.opened.length; len++) {
-            const cell = toCell(game.opened[len]);
+            const cell = toCell(dim, game.opened[len]);
             result.Cells.push({ Cell: cell, Value: getCellValue(board, cell) });
         }
 
@@ -121,7 +141,7 @@ function getNeighbors(dim, cell) {
             if (i === 0 && j === 0) {
                 continue;
             }
-            const cell1 = [cell[0] + i, cell[0] + j];
+            const cell1 = [cell[0] + i, cell[1] + j];
             if (cell1[0] < 0 || cell1[1] < 0 || cell1[0] >= dim[0] || cell1[1] >= dim[1]) {
                 continue;
             }
@@ -143,8 +163,11 @@ function toCell(dim, num) {
 function generateCompleteBoard(dim, mines) {
     const board = new Array(dim[0]).fill(0).map(() => new Array(dim[1]).fill(0));
     for (let m of mines) {
-        const cell = toCell(m);
+        const cell = toCell(dim, m);
         const neighbors = getNeighbors(dim, cell);
+        //console.log("cell", cell);
+        //console.log("Board", board);
+        const row = board[cell[0]];
         board[cell[0]][cell[1]] = -1;
         for (let n of neighbors) {
             board[n[0]][n[1]]++;
@@ -161,10 +184,10 @@ function openZeros(board, openedCells, cell) {
     if (getCellValue(board, cell) != 0) {
         return;
     }
-
-    const neighbors = getNeighbors([board.length, board[0].length], cell);
+    const dim = [board.length, board[0].length];
+    const neighbors = getNeighbors(dim, cell);
     for (let n in neighbors) {
-        const cellNum = toCellNumber(n);
+        const cellNum = toCellNumber(dim,n);
         if (openedCells.includes(cellNum)) {
             continue;
         }

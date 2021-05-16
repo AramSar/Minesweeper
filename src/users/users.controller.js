@@ -11,7 +11,7 @@ router.get('/leaderboard/:mode', asyncHandler(async (req, res) => {
 
 router.get('/', asyncHandler(async (req, res) => {
     const { userId } = req.user;
-    const result = await users.findOne(userId);
+    const result = await users.findOne(userId, true);
     res.json(result);
 }));
 
