@@ -46,7 +46,11 @@ const schema = new Schema({
     },
 
     bestTimes: {
-        type: Map,
+        type: {
+            Easy : Number,
+            Medium: Number,
+            Hard: Number
+        },
         required: true,
         default: {
             Easy: 0,

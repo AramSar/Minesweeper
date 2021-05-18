@@ -35,8 +35,7 @@ class GameService {
 
         const game = new Game(payload);
         const { _id } = await game.save();
-
-        console.log("FINAL GAME", payload);
+        
         await UserService.informGameCreated(userId);
         return { id: _id, dimentions, mineCount };
     }
@@ -171,13 +170,11 @@ function generateCompleteBoard(dim, mines) {
     for (let m of mines) {
         const cell = toCell(dim, m);
         const neighbors = getNeighbors(dim, cell);
-        //console.log("cell", cell);
-        //console.log("Board", board);
-        const row = board[cell[0]];
+
         board[cell[0]][cell[1]] = -1;
         for (let n of neighbors) {
 
-            if(board[n[0]][n[1]] != 1){
+            if(board[n[0]][n[1]] != -1){
                 board[n[0]][n[1]]++;
             }           
         }
@@ -190,14 +187,9 @@ function getCellValue(board, cell) {
 }
 
 function openZeros(board, openedCells, cell) {
-
-    console.log("FIRST Here", cell);
-
     if (getCellValue(board, cell) != 0) {
         return;
     }
-    console.log("Here", cell);
-    console.log("Board",board);
     const dim = [board.length, board[0].length];
     const neighbors = getNeighbors(dim, cell);
     for (let n of neighbors) {

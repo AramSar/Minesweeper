@@ -13,9 +13,13 @@ class UserService {
         const limit = 10
 
         const sortObj = {};
-        sortObj[`bestTimes.${mode}`] = 'asc'
+        const varName = `bestTimes.${mode}`;
+        sortObj[varName] = 'asc'
 
-        return User.find({}, { password: false,  __v : false})
+        const filter = {};
+        filter [varName] = {$gt : 0};
+
+        return User.find(filter, { password: false,  __v : false})
             .limit(limit)
             .sort(sortObj)
             .exec();
@@ -36,6 +40,7 @@ class UserService {
         if (!user) {
             throw new NotFound(`User with id ${id} not found.`);
         }
+
         return user;
     }
 
@@ -48,18 +53,23 @@ class UserService {
         const user = await this.findOne(game.user);
 
         const isWin = game.status == GameStatus.Win;
-        if(isWin){
-            user.wonGames++;           
-        }
-        
-        let currentBest = user.bestTimes[game.difficulty];
+        if(isWin){            
+            user.wonGames++;
 
-        if(!currentBest){
-            currentBest = Number.MAX_SAFE_INTEGER;
-        }
-        
-        user.bestTimes[game.difficulty] = Math.min(currentBest, (game.endTimeStamp - game.startTimeStamp)/1000);
-        await user.save();
+            let currentBest = user.bestTimes[game.difficulty];
+
+            if(!currentBest){
+                currentBest = Number.MAX_SAFE_INTEGER;
+            }
+
+            const newBestTime = Math.min(currentBest, (game.endTimeStamp - game.startTimeStamp)/1000);
+            const bestTimesCopy = {...user.bestTimes};
+
+            bestTimesCopy[game.difficulty] = newBestTime;
+            user.bestTimes = bestTimesCopy;
+            
+            await user.save();        
+        }      
     }
 
     async informGameCreated(userId){
