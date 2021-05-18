@@ -5,10 +5,7 @@ const jwt = require('jsonwebtoken');
 
 class AuthService {
     async validate(username, password) {
-        console.log(username, password);
         const user = await User.findOne({ username });
-
-        console.log(user);
 
         if (!user || !bcrypt.compareSync(password, user.password)) {
             throw new Unauthorized();
@@ -28,11 +25,9 @@ class AuthService {
     }
 
     validateToken(token) {
-        console.log("validating",token);
         const obj = jwt.verify(token, process.env.JWT_SECRET, {
             ignoreExpiration: true
         })
-        console.log(obj);
         return { userId: obj.userId, username: obj.username };
     }
 }

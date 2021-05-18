@@ -22,8 +22,6 @@ class GameService {
             mineSet.add(Math.floor(Math.random() * dimentions[0] * dimentions[1]))
         }
 
-        console.log(mineSet);
-
         const payload = {
             difficulty: difficulty,
             user: userId,
@@ -42,7 +40,6 @@ class GameService {
 
     async openCell(gameId, userId, cell) {
         const game = await Game.findById(gameId).exec();
-        console.log(game);
 
         if(!game){
             throw new NotFound("Game not found");
