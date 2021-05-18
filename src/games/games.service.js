@@ -38,7 +38,7 @@ class GameService {
 
         console.log("FINAL GAME", payload);
         await UserService.informGameCreated(userId);
-        return { id: _id, dimentions };
+        return { id: _id, dimentions, mineCount };
     }
 
     async openCell(gameId, userId, cell) {
@@ -84,6 +84,12 @@ class GameService {
         else if (value == -1) {
             result.Status = GameStatus.Lose;
             game.status = 2;
+
+            for(let bomb of game.mines){
+                if(bomb != cellNumber){
+                    result.Cells.push({Cell : toCell(dim, bomb), Value: -1});
+                }
+            }
         }
 
         if (result.Status == GameStatus.InProgress && game.opened.length + game.mines.length == dim[0] * dim[1]) {
@@ -130,7 +136,7 @@ class GameService {
 function getDimentions(difficulty) {
     return difficulty == Difficulty.Easy ? [9, 9] :
         difficulty == Difficulty.Medium ? [16, 16] :
-            difficulty == Difficulty.Hard ? [30, 16] : 0;
+            difficulty == Difficulty.Hard ? [16, 30] : 0;
 }
 
 function getNeighbors(dim, cell) {
@@ -170,7 +176,10 @@ function generateCompleteBoard(dim, mines) {
         const row = board[cell[0]];
         board[cell[0]][cell[1]] = -1;
         for (let n of neighbors) {
-            board[n[0]][n[1]]++;
+
+            if(board[n[0]][n[1]] != 1){
+                board[n[0]][n[1]]++;
+            }           
         }
     }
     return board;
@@ -181,17 +190,22 @@ function getCellValue(board, cell) {
 }
 
 function openZeros(board, openedCells, cell) {
+
+    console.log("FIRST Here", cell);
+
     if (getCellValue(board, cell) != 0) {
         return;
     }
+    console.log("Here", cell);
+    console.log("Board",board);
     const dim = [board.length, board[0].length];
     const neighbors = getNeighbors(dim, cell);
-    for (let n in neighbors) {
+    for (let n of neighbors) {
         const cellNum = toCellNumber(dim,n);
         if (openedCells.includes(cellNum)) {
             continue;
         }
-        openedCells.push();
+        openedCells.push(cellNum);
         openZeros(board, openedCells, n);
     }
 }
