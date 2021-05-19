@@ -111,20 +111,22 @@ class GameService {
     async getFullBoard(gameId, userId) {
         const game = await Game.findById(gameId).exec();
 
-        if (game?.userId !== userId) {
+        if (game?.userId != userId) {
             throw new Forbidden();
         }
-
+        game.dimentions = getDimentions(game.difficulty)
         const board = generateCompleteBoard(game.dimentions, game.mines);
-        for (let i = 0; i < game.dimentions[0]; i++) {
-            for (let j = 0; j < game.dimentions[1]; j++) {
-                if (!game.opened.includes(toCellNumber([i, j]))) {
-                    board[i][j] = null;
-                }
-            }
+        
+        let res = [];
+        for (let i of game.opened){
+            const cell = toCell(game.dimentions, i);
+            const value = board[cell[0]][cell[1]];
+            res.push({Cell: cell, Value: value})
         }
 
-        return board;
+
+        return {Cells: res, dimentions: game.dimentions, mineCount: game.mines.length, 
+            startTimeStamp: game.startTimeStamp, difficulty: game.difficulty};
     }
 }
 

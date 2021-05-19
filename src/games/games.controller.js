@@ -19,8 +19,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const result = games.getFullBoard(id, req.user.id);
-
+    const result = await games.getFullBoard(id, req.user.id);
     res.json(result);
 }));
 
